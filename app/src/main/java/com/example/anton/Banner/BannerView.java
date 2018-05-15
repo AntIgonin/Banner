@@ -25,6 +25,7 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.ImageLoader;
 import com.android.volley.toolbox.ImageRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
@@ -41,7 +42,7 @@ import static android.content.ContentValues.TAG;
 
 public class BannerView extends ViewGroup {
 
-    String HOST_NAME = "http://adlibtech.ru";
+    private String HOST_NAME = "http://adlibtech.ru";
     Context intentContext;
     View rootView;
     ViewGroup viewGroup;
@@ -49,8 +50,8 @@ public class BannerView extends ViewGroup {
     RequestQueue queue;
     BannerConst bannerConst;
     String url;
-    StringRequest banerReq;
-    JSONObject jsonObject;
+    private StringRequest banerReq;
+    private JSONObject jsonObject;
     protected int mWidth = 0;
     protected int mHeight = 0;
 
@@ -70,10 +71,11 @@ public class BannerView extends ViewGroup {
 
         bannerConst = new BannerConst(context);
 
+
         url = "http://adlibtech.ru/adv/bserv.php?" +
                 "action=getAdContent" +
                 "&appname=" + bannerConst.getName() +
-                "&appbundle=" + bannerConst.getBundle() +
+                "&appbundle=com.example.anton.election" +
                 "&appversion=" + bannerConst.getVersion() +
                 "&deviceid=" + bannerConst.getdeviceUuid() +
                 "&devicename=" + bannerConst.getdeviceName() +
@@ -86,23 +88,84 @@ public class BannerView extends ViewGroup {
 
         Log.d("Url",url);
 
+        LoadingStringRequest();
+    }
+
+    private void init(){
+        TextView BannerText = (TextView) rootView.findViewById(R.id.BannerText);
+        TextView BannerKing = (TextView) rootView.findViewById(R.id.BannerKing);
+        ImageButton CloseBanner = (ImageButton) rootView.findViewById(R.id.BannerButtonClose);
+        ImageView imageView = (ImageView) rootView.findViewById(R.id.BannerImage);
+
+        BannerText.setVisibility(GONE);
+        BannerKing.setText("ALVA ADS");
+
+        final CountDownTimer timer2 = new CountDownTimer((Long) jsonObject.get("ad_show_time") * 1000,1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {}
+            @Override
+            public void onFinish() {
+                LoadingStringRequest();
+            }
+        };
+
+        final CountDownTimer timer = new CountDownTimer((Long) jsonObject.get("ad_delay_time") * 1000,1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {}
+            @Override
+            public void onFinish() {
+                rootView.setVisibility(VISIBLE);
+                requestLayout();
+                timer2.start();
+            }
+
+        }.start();
+
+        CloseBanner.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                timer2.cancel();
+                LoadingStringRequest();
+            }
+        });
+
+        imageView.setOnClickListener(new OnClickListener() {
+            @Override
+
+            public void onClick(View v) {
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse((String) jsonObject.get("ad_client_url")));
+                intentContext.startActivity(browserIntent);
+                String urlClick =
+                        "http://adlibtech.ru/adv/bserv.php?action=setAdClick&" +
+                        "ad_id="+jsonObject.get("ad_id") +
+                        "&ls_id="+ jsonObject.get("last_stat_id") ;
+                         Log.d("Click",urlClick);
+                StringRequest ClickReq = new StringRequest(Request.Method.GET,urlClick,
+                        new Response.Listener<String>() {
+                            @Override
+                            public void onResponse(String s) {
+                                Log.d("Click",s);
+                            }
+                        },
+                        new Response.ErrorListener() {
+                            @Override
+                            public void onErrorResponse(VolleyError volleyError) {
+                                volleyError.fillInStackTrace();
+                            }
+                        })
+                {
+                };
+                queue.add(ClickReq);
+
+            }
+
+        });
 
     }
 
-
-    @Override
-    protected void dispatchDraw(Canvas canvas) {
-        super.dispatchDraw(canvas);
-
-        Log.d("Draw", "Draw");
-        final ImageView imageView = (ImageView) rootView.findViewById(R.id.BannerImage);
-        final TextView textView = (TextView) rootView.findViewById(R.id.BannerText);
-        final TextView textView2 = (TextView) rootView.findViewById(R.id.BannerKing);
-        final ImageButton imageButton = (ImageButton) rootView.findViewById(R.id.BannerButtonClose);
-        final CountDownTimer timer2;
+    private void LoadingStringRequest(){
         rootView.setVisibility(GONE);
-
-        banerReq = new StringRequest(Request.Method.GET, url,
+        banerReq = new StringRequest(Request.Method.GET,url,
 
                 new Response.Listener<String>() {
                     @Override
@@ -115,79 +178,10 @@ public class BannerView extends ViewGroup {
 
                             jsonObject = (JSONObject) object;
 
-                            Log.wtf(TAG, "onResponse: "+s );
+                            Log.wtf(TAG, "onResponse: "+s);
 
-                            /*Загружаем картинку и ставим ее в форму*/
-                            String imageUrl = (String) jsonObject.get("ad_image");
-                            imageUrl = imageUrl.replace("http://localhost/kukuruznik", HOST_NAME);
+                           if (jsonObject.get("ad_type").equals("image")){ LoadingImage();}
 
-                            ImageRequest imageRequest = new ImageRequest(imageUrl, new Response.Listener<Bitmap>() {
-                                @Override
-                                public void onResponse(Bitmap bitmap) {
-                                    imageView.setImageBitmap(bitmap);
-                                }
-                            }, 0, 0, ImageView.ScaleType.CENTER_CROP, null, new Response.ErrorListener() {
-                                @Override
-                                public void onErrorResponse(VolleyError volleyError) {
-                                    Log.d("Response", "Не полетели! Candidats");
-                                }
-                            });
-                            queue.add(imageRequest);
-
-                            /*Убираем тескстовое представление файла*/
-                            textView.setVisibility(GONE);
-
-                            textView2.setText("ALVA ADS");
-
-                            final CountDownTimer timer2 = new CountDownTimer((Long) jsonObject.get("ad_show_time") * 1000,1000) {
-                                @Override
-                                public void onTick(long millisUntilFinished) {
-
-                                }
-                                @Override
-                                public void onFinish() {
-                                   invalidate();
-                                   requestLayout();
-                                }
-                            };
-
-                            final CountDownTimer timer = new CountDownTimer((Long) jsonObject.get("ad_delay_time") * 1000,1000) {
-                                @Override
-                                public void onTick(long millisUntilFinished) {
-
-                                }
-                                @Override
-                                public void onFinish() {
-                                    rootView.setVisibility(VISIBLE);
-                                    timer2.start();
-                                }
-                            }.start();
-
-                            imageView.setOnClickListener(new OnClickListener() {
-                                @Override
-                                public void onClick(View v) {
-                                    Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse((String) jsonObject.get("ad_client_url")));
-                                    intentContext.startActivity(browserIntent);
-                                }
-                            });
-
-                            imageButton.setOnClickListener(new OnClickListener() {
-                                @Override
-                                public void onClick(View v) {
-                                    timer2.cancel();
-                                    invalidate();
-                                }
-                            });
-
-                            //Задаем размеры, но работают не правильно т.к. с сервера приходит 100 на 100
-                            /*
-                            ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) imageView.getLayoutParams(); // получаем параметры
-                            long height = (long) jsonObject.get("ad_height");
-                            long width = (long) jsonObject.get("ad_width");
-                            params.height = (int) height;
-                            params.width = (int) width;
-                            imageView.setLayoutParams(params);
-                            */
 
                         } catch (ParseException e) {
                             e.printStackTrace();
@@ -200,10 +194,34 @@ public class BannerView extends ViewGroup {
                     public void onErrorResponse(VolleyError volleyError) {
                         volleyError.fillInStackTrace();
                     }
-                }) {
+                })
+        {
         };
         queue.add(banerReq);
+    }
 
+    private void LoadingImage(){
+
+        String imageUrl = (String) jsonObject.get("ad_image");
+        imageUrl = imageUrl.replace("http://localhost/kukuruznik", HOST_NAME);
+
+        ImageRequest imageRequest = new ImageRequest(imageUrl, new Response.Listener<Bitmap>() {
+            @Override
+            public void onResponse(Bitmap bitmap) {
+                init();
+                ImageView imageView = (ImageView) rootView.findViewById(R.id.BannerImage);
+                imageView.setImageBitmap(bitmap);
+                imageView.getLayoutParams().width = bitmap.getWidth()*2;
+                imageView.getLayoutParams().height = bitmap.getHeight()*2;
+                imageView.requestLayout();
+            }
+        }, 0, 0, ImageView.ScaleType.CENTER_CROP, null, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError volleyError) {
+                Log.d("Response", "Не полетели! Candidats");
+            }
+        });
+        queue.add(imageRequest);
 
     }
 
@@ -245,6 +263,7 @@ public class BannerView extends ViewGroup {
             }
         }
         Log.d(TAG, "onLayout L2:" + l + ", " + t + ", " + r + ", " + b);
+
 
     }
 }

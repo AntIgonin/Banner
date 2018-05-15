@@ -13,7 +13,7 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
-import org.json.JSONObject;
+import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
@@ -44,7 +44,7 @@ public class BannerInfo {
         url = "http://adlibtech.ru/adv/bserv.php?" +
                 "action=getAdContent" +
                 "&appname=" + bannerConst.getName() +
-                "&appbundle=" + bannerConst.getBundle() +
+                "&appbundle=com.example.anton.election" +
                 "&appversion=" + bannerConst.getVersion() +
                 "&deviceid=" + bannerConst.getdeviceUuid() +
                 "&devicename=" + bannerConst.getdeviceName() +
@@ -74,7 +74,7 @@ public class BannerInfo {
 
                             jsonObject = (JSONObject) object;
 
-                            Log.wtf(TAG, "onResponse: "+ s );
+                            Log.wtf(TAG, "onResponse: "+s);
 
 
 
@@ -98,11 +98,6 @@ public class BannerInfo {
 
 
 
-    public boolean volleyReady(){
-        if(volleyready == true){return true;}
-        else return false;
-
-    }
 
 
 
