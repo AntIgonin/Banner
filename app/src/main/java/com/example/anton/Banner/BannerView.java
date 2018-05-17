@@ -2,13 +2,16 @@ package com.example.anton.Banner;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.support.constraint.ConstraintLayout;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -55,23 +58,18 @@ public class BannerView extends ViewGroup {
     protected int mWidth = 0;
     protected int mHeight = 0;
 
+
     public BannerView(Context context, ViewGroup viewGroup) {
         super(context);
         setWillNotDraw(false);
 
+
         intentContext = context;
-
         queue = Volley.newRequestQueue(context);
-
         this.viewGroup = viewGroup;
-
-        Log.d("Construktor", "CCCCCC");
-
         rootView = inflate(context, R.layout.content_banner_view, viewGroup);
 
         bannerConst = new BannerConst(context);
-
-
         url = "http://adlibtech.ru/adv/bserv.php?" +
                 "action=getAdContent" +
                 "&appname=" + bannerConst.getName() +
@@ -86,9 +84,11 @@ public class BannerView extends ViewGroup {
                 "&sheight=" + bannerConst.height() +
                 "&nettype=" + bannerConst.getnetType();
 
-        Log.d("Url",url);
+        Log.d("URL",url);
+
 
         LoadingStringRequest();
+
     }
 
     private void init(){
@@ -96,6 +96,7 @@ public class BannerView extends ViewGroup {
         TextView BannerKing = (TextView) rootView.findViewById(R.id.BannerKing);
         ImageButton CloseBanner = (ImageButton) rootView.findViewById(R.id.BannerButtonClose);
         ImageView imageView = (ImageView) rootView.findViewById(R.id.BannerImage);
+
 
         BannerText.setVisibility(GONE);
         BannerKing.setText("ALVA ADS");
@@ -129,12 +130,24 @@ public class BannerView extends ViewGroup {
             }
         });
 
+        BannerKing.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(intentContext, WebActivity.class);
+                intent.putExtra("web", "http://alvastudio.com");
+                intentContext.startActivity(intent);
+            }
+        });
+
         imageView.setOnClickListener(new OnClickListener() {
             @Override
 
             public void onClick(View v) {
-                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse((String) jsonObject.get("ad_client_url")));
-                intentContext.startActivity(browserIntent);
+                Intent intent = new Intent(intentContext, WebActivity.class);
+                intent.putExtra("web", String.valueOf(jsonObject.get("ad_client_url")));
+                intentContext.startActivity(intent);
+
+
                 String urlClick =
                         "http://adlibtech.ru/adv/bserv.php?action=setAdClick&" +
                         "ad_id="+jsonObject.get("ad_id") +
@@ -177,12 +190,10 @@ public class BannerView extends ViewGroup {
                             Object object = jsonParser.parse(s);
 
                             jsonObject = (JSONObject) object;
-
-                            Log.wtf(TAG, "onResponse: "+s);
-
-                           if (jsonObject.get("ad_type").equals("image")){ LoadingImage();}
-
-
+                            Log.d("Url",s);
+                            BannerInfo bannerInfo = new BannerInfo(jsonObject);
+                            if(jsonObject.get("ad_type").equals("image")){LoadingImage();}
+                            init();
                         } catch (ParseException e) {
                             e.printStackTrace();
                         }
@@ -208,12 +219,14 @@ public class BannerView extends ViewGroup {
         ImageRequest imageRequest = new ImageRequest(imageUrl, new Response.Listener<Bitmap>() {
             @Override
             public void onResponse(Bitmap bitmap) {
-                init();
+
                 ImageView imageView = (ImageView) rootView.findViewById(R.id.BannerImage);
+                imageView.getLayoutParams().width = Integer.parseInt(bannerConst.width());
+                imageView.getLayoutParams().height = makeHeight(bitmap);
                 imageView.setImageBitmap(bitmap);
-                imageView.getLayoutParams().width = bitmap.getWidth()*2;
-                imageView.getLayoutParams().height = bitmap.getHeight()*2;
                 imageView.requestLayout();
+
+
             }
         }, 0, 0, ImageView.ScaleType.CENTER_CROP, null, new Response.ErrorListener() {
             @Override
@@ -224,6 +237,12 @@ public class BannerView extends ViewGroup {
         queue.add(imageRequest);
 
     }
+
+    private int makeHeight(Bitmap bitmap){
+        double ratio = (double) bitmap.getWidth()/(double) bitmap.getHeight();
+        return (int) (Integer.parseInt(bannerConst.width())/ratio);
+    }
+
 
 
     @Override
@@ -266,4 +285,11 @@ public class BannerView extends ViewGroup {
 
 
     }
+
+  public String getInfoAboutBanner(String infoName){
+        return bannerInfo.getInfoBanner(infoName);
+  }
+
+
+
 }
