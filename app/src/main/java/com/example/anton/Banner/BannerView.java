@@ -55,14 +55,17 @@ public class BannerView extends ViewGroup {
     String url;
     private StringRequest banerReq;
     private JSONObject jsonObject;
+
     protected int mWidth = 0;
     protected int mHeight = 0;
+    boolean isRunning = false;
+    protected boolean IT_IS_DELAY = true;
 
+    protected CountDownTimer bannerTimer;
 
     public BannerView(Context context, ViewGroup viewGroup) {
         super(context);
         setWillNotDraw(false);
-
 
         intentContext = context;
         queue = Volley.newRequestQueue(context);
@@ -87,8 +90,6 @@ public class BannerView extends ViewGroup {
         Log.d("URL",url);
 
 
-        LoadingStringRequest();
-
     }
 
     private void init(){
@@ -97,38 +98,11 @@ public class BannerView extends ViewGroup {
         ImageButton CloseBanner = (ImageButton) rootView.findViewById(R.id.BannerButtonClose);
         ImageView imageView = (ImageView) rootView.findViewById(R.id.BannerImage);
 
+        createdTimer((Long) jsonObject.get("ad_delay_time"));
 
         BannerText.setVisibility(GONE);
         BannerKing.setText("ALVA ADS");
 
-        final CountDownTimer timer2 = new CountDownTimer((Long) jsonObject.get("ad_show_time") * 1000,1000) {
-            @Override
-            public void onTick(long millisUntilFinished) {}
-            @Override
-            public void onFinish() {
-                LoadingStringRequest();
-            }
-        };
-
-        final CountDownTimer timer = new CountDownTimer((Long) jsonObject.get("ad_delay_time") * 1000,1000) {
-            @Override
-            public void onTick(long millisUntilFinished) {}
-            @Override
-            public void onFinish() {
-                rootView.setVisibility(VISIBLE);
-                requestLayout();
-                timer2.start();
-            }
-
-        }.start();
-
-        CloseBanner.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                timer2.cancel();
-                LoadingStringRequest();
-            }
-        });
 
         BannerKing.setOnClickListener(new OnClickListener() {
             @Override
@@ -136,6 +110,15 @@ public class BannerView extends ViewGroup {
                 Intent intent = new Intent(intentContext, WebActivity.class);
                 intent.putExtra("web", "http://alvastudio.com");
                 intentContext.startActivity(intent);
+            }
+        });
+
+        CloseBanner.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                destTimer();
+                rootView.setVisibility(INVISIBLE);
+                LoadingStringRequest();
             }
         });
 
@@ -177,42 +160,42 @@ public class BannerView extends ViewGroup {
     }
 
     private void LoadingStringRequest(){
-        rootView.setVisibility(GONE);
-        banerReq = new StringRequest(Request.Method.GET,url,
+        if(isRunning) {
+            banerReq = new StringRequest(Request.Method.GET, url,
 
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String s) {
+                    new Response.Listener<String>() {
+                        @Override
+                        public void onResponse(String s) {
 
-                        JSONParser jsonParser = new JSONParser();
+                            JSONParser jsonParser = new JSONParser();
 
-                        try {
-                            Object object = jsonParser.parse(s);
+                            try {
+                                Object object = jsonParser.parse(s);
+                                jsonObject = (JSONObject) object;
+                                Log.d("Url", s);
+                                BannerInfo bannerInfo = new BannerInfo(jsonObject);
+                                if (jsonObject.get("ad_type").equals("image")) {
+                                    LoadingImage();
+                                }
+                                init();
+                            } catch (ParseException e) {
+                                e.printStackTrace();
+                            }
 
-                            jsonObject = (JSONObject) object;
-                            Log.d("Url",s);
-                            BannerInfo bannerInfo = new BannerInfo(jsonObject);
-                            if(jsonObject.get("ad_type").equals("image")){LoadingImage();}
-                            init();
-                        } catch (ParseException e) {
-                            e.printStackTrace();
                         }
-
-                    }
-                },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError volleyError) {
-                        volleyError.fillInStackTrace();
-                    }
-                })
-        {
-        };
-        queue.add(banerReq);
+                    },
+                    new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError volleyError) {
+                            volleyError.fillInStackTrace();
+                        }
+                    }) {
+            };
+            queue.add(banerReq);
+        }
     }
 
     private void LoadingImage(){
-
         String imageUrl = (String) jsonObject.get("ad_image");
         imageUrl = imageUrl.replace("http://localhost/kukuruznik", HOST_NAME);
 
@@ -290,6 +273,53 @@ public class BannerView extends ViewGroup {
         return bannerInfo.getInfoBanner(infoName);
   }
 
+  protected void createdTimer(long time){
+      bannerTimer = new CountDownTimer(time * 1000,1000) {
+          @Override
+          public void onTick(long millisUntilFinished) {}
+          @Override
+          public void onFinish() {
+            if (IT_IS_DELAY == false){
+                rootView.setVisibility(INVISIBLE);
+                LoadingStringRequest();
+                destTimer();
+                IT_IS_DELAY = true;
+            }else {
+                rootView.setVisibility(VISIBLE);
+                destTimer();
+                IT_IS_DELAY = false;
+                createdTimer((Long) jsonObject.get("ad_show_time"));
+            }
+
+          }
+      }.start();
+  }
+
+
+
+  protected void destTimer(){
+      if (bannerTimer != null) {
+          bannerTimer.cancel();
+          bannerTimer = null;
+      }
+  }
+
+  public void start(){
+      Log.d("BannerView", "Start");
+      rootView.setVisibility(INVISIBLE);
+      isRunning = true;
+      LoadingStringRequest();
+  }
+
+  public void stop(){
+      Log.d("BannerView", "Stop");
+      rootView.setVisibility(GONE);
+      destTimer();
+      isRunning = false;
+  }
+  public boolean checkRun(){
+      return isRunning;
+  }
 
 
 }
