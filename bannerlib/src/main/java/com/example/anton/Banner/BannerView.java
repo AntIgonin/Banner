@@ -11,7 +11,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-import android.support.constraint.ConstraintLayout;
+
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -34,7 +34,7 @@ import com.android.volley.toolbox.ImageLoader;
 import com.android.volley.toolbox.ImageRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
-import com.example.anton.bannerview.R;
+import com.example.bannerlib.R;
 
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -79,8 +79,6 @@ public class BannerView extends ViewGroup {
         queue = Volley.newRequestQueue(context);
         this.viewGroup = viewGroup;
 
-        //rootView = inflate(context, R.layout.content_banner_view, viewGroup);
-
         inflater = (LayoutInflater)context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         this.addView(inflater.inflate(R.layout.content_banner_view, null));
 
@@ -100,8 +98,6 @@ public class BannerView extends ViewGroup {
                 "&swidth=" + bannerConst.width() +
                 "&sheight=" + bannerConst.height() +
                 "&nettype=" + bannerConst.getnetType();
-
-        Log.d("URL",url);
 
        setVisibility(INVISIBLE);
 
@@ -132,7 +128,7 @@ public class BannerView extends ViewGroup {
             @Override
             public void onClick(View v) {
                 destTimer();
-                //rootView.setVisibility(INVISIBLE);
+                setVisibility(INVISIBLE);
                 LoadingStringRequest();
             }
         });
@@ -222,16 +218,13 @@ public class BannerView extends ViewGroup {
                 imageView.getLayoutParams().height = makeHeight(bitmap);
                 imageView.setImageBitmap(bitmap);
                 imageView.requestLayout();
-
-
-
                 requestLayout();
 
             }
         }, 0, 0, ImageView.ScaleType.CENTER_CROP, null, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError volleyError) {
-                Log.d("Response", "Не полетели! Candidats");
+                Log.d("Response", "Error.BannerImage");
             }
         });
         queue.add(imageRequest);
@@ -305,8 +298,6 @@ public class BannerView extends ViewGroup {
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         int count = getChildCount();
-        Log.wtf(TAG, "onLayout: "+getChildCount());
-
         for (int i = 0; i < count; i++) {
 
             View child = getChildAt(i);
@@ -330,8 +321,6 @@ public class BannerView extends ViewGroup {
             }
 
         }
-        Log.d(TAG, "onLayout L2:" + l + ", " + t + ", " + r + ", " + b);
-
 
     }
 
@@ -446,8 +435,6 @@ public class BannerView extends ViewGroup {
             y = a.getDimensionPixelOffset(
                     R.styleable.BannerView_layout_y, 0);
             a.recycle();
-
-            Log.d("x and y",x+" "+y);
 
         }
 
